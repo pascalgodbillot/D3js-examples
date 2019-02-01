@@ -1,0 +1,260 @@
+<!DOCTYPE html>
+<head>
+  <meta charset="utf-8">
+  <script src="https://d3js.org/d3.v4.min.js"></script>
+  <style>
+    body { margin:0;position:fixed;top:0;right:0;bottom:0;left:0; }
+  </style>
+</head>
+<body>
+  
+<script>
+  
+  var margin = {top: 80, right: 80, bottom: 80, left: 80},
+  width = 900 - margin.left - margin.right,
+  height = 500 - margin.top - margin.bottom;
+  
+  // 1. Create the SVG
+
+  var svg = d3.select("body").append("svg")
+  .attr("width", width + margin.left + margin.right)
+  .attr("height", height + margin.top + margin.bottom)
+  .append("g")
+  .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+  
+  
+  // Temporal scale
+  var x = d3.scaleTime()
+  .range([0, width]);
+
+  // Linear scale
+  var y = d3.scaleLinear()
+  //.range([height, height - 200]);
+  .range([height, 0]);
+  
+  var line = d3.line()
+  .x(function(d) { return x(d.date); })
+  .y(function(d) { return y(d.price); });
+  
+  //var g = svg.append("g")
+  //.attr("transform", "translate(0, 0)");
+
+  //data
+  
+  var parseDate = d3.timeParse("%b %Y");
+  var displayDate = d3.timeFormat("%b %Y");
+  //var displayValue = d3.format(",.0f");
+  
+  d3.csv('stocks.csv', function(error, raw) {
+
+    var AAPL = [];
+    var AMZN = [];
+    var MSFT = [];
+    var IBM = [];
+    
+    raw.forEach(function(d, i) {
+      d.price = +d.price;
+      d.date = parseDate(d.date);
+   		if (d.symbol === 'AAPL'){
+        AAPL.push(d);
+      }
+      else if (d.symbol === 'AMZN'){
+        AMZN.push(d);
+      }
+      else if (d.symbol === 'MSFT'){
+        MSFT.push(d);
+      }
+      else {
+				IBM.push(d);
+      }
+    })
+
+    data = raw
+    
+    //console.log(AMZN)
+    
+    x.domain(d3.extent(data, function(d) { return d.date; }));
+  	y.domain([0, 10+d3.max(data, function(d) { return d.price; })]);
+    
+    //svg.selectAll("text").data(data).enter()
+      //.append("text")
+      //.attr("y", 420)
+      //.attr("x", function(d) { return x(d.date); })
+      //.attr("id", "")
+      //.style("font-size", 10)
+      //.style("font-family", "monospace")
+      //.text(function(d, i) { return d.date; });
+  
+    svg.selectAll("path").data([AAPL]).enter()
+      .append("path")
+    	.attr("id", "AAPL")
+      .attr("class", "line")
+      .attr("d", line)
+    	.attr("stroke","red")
+    	.attr ("fill", "none")
+    	.attr("stroke-width", "2")	
+      .on("mouseover", function(d, i) {
+        d3.select(this).attr("stroke-width", "4")
+        d3.select("#MSFT").style('opacity', "0.25")
+        d3.select("#AMZN").style('opacity', "0.25")
+        d3.select("#IBM").style('opacity', "0.25")
+      })
+      .on("mouseleave", function(d, i) {
+    	d3.select(this).attr("stroke-width", "2")
+        d3.select("#MSFT").style('opacity', "1")
+        d3.select("#AMZN").style('opacity', "1")
+        d3.select("#IBM").style('opacity', "1")
+      });
+    
+
+    svg.selectAll("text").data([AAPL[AAPL.length -1]]).enter()
+      .append("text")
+      .attr("class", "price")
+      .attr("y", function(d) { return y(d.price); })
+      .attr("x", width + 5)
+    	.style('fill', 'red')
+      .style("font-size", 14)
+      .style("font-family", "monospace")
+      .text(function(d, i) { return d.symbol; });
+
+    
+    svg.append("path").data([AMZN])
+    	.attr("id", "AMZN")
+      .attr("class", "line")
+      .attr("d", line)
+    	.attr("stroke","darkOrange")
+    	.attr ("fill", "none")
+    	.attr("stroke-width", "2")
+      .on("mouseover", function(d, i) {
+        d3.select(this).attr("stroke-width", "4")
+        d3.select("#AAPL").style('opacity', "0.25")
+        d3.select("#MSFT").style('opacity', "0.25")
+        d3.select("#IBM").style('opacity', "0.25")
+      })
+      .on("mouseleave", function(d, i) {
+    	d3.select(this).attr("stroke-width", "2")
+        d3.select("#AAPL").style('opacity', "1")
+        d3.select("#MSFT").style('opacity', "1")
+        d3.select("#IBM").style('opacity', "1")
+      });
+    
+    svg.append("text").data([AMZN[AMZN.length -1]])
+      .attr("class", "price")
+      .attr("y", function(d) { return y(d.price+4); })
+      .attr("x", width + 5)
+    	.style('fill', 'darkOrange')
+      .style("font-size", 14)
+      .style("font-family", "monospace")
+      .text(function(d, i) { return d.symbol; });
+    
+    
+    svg.append("path").data([IBM])
+    	.attr("id", "IBM")
+      .attr("class", "line")
+      .attr("d", line)
+    	.attr("stroke","gold")
+    	.attr ("fill", "none")
+    	.attr("stroke-width", "2")
+      .on("mouseover", function(d, i) {
+        d3.select(this).attr("stroke-width", "4")
+        d3.select("#AAPL").style('opacity', "0.25")
+        d3.select("#AMZN").style('opacity', "0.25")
+        d3.select("#MSFT").style('opacity', "0.25")
+      })
+      .on("mouseleave", function(d, i) {
+    	d3.select(this).attr("stroke-width", "2")
+        d3.select("#AAPL").style('opacity', "1")
+        d3.select("#AMZN").style('opacity', "1")
+        d3.select("#MSFT").style('opacity', "1")
+      });
+    
+    svg.append("text").data([IBM[IBM.length -1]])
+      .attr("class", "price")
+      .attr("y", function(d) { return y(d.price-4); })
+      .attr("x", width + 5)
+    	.style('fill', 'gold')
+      .style("font-size", 14)
+      .style("font-family", "monospace")
+      .text(function(d, i) { return d.symbol; });
+    
+    svg.append("path").data([MSFT])
+    	.attr("id", "MSFT")
+      .attr("class", "line")
+      .attr("d", line)
+    	.attr("stroke","green")
+    	.attr ("fill", "none")
+    	.attr("stroke-width", "2")
+      .on("mouseover", function(d, i) {
+        d3.select(this).attr("stroke-width", "4")
+        d3.select("#AAPL").style('opacity', "0.25")
+        d3.select("#AMZN").style('opacity', "0.25")
+        d3.select("#IBM").style('opacity', "0.25")
+      })
+      .on("mouseleave", function(d, i) {
+    	d3.select(this).attr("stroke-width", "2")
+        d3.select("#AAPL").style('opacity', "1")
+        d3.select("#AMZN").style('opacity', "1")
+        d3.select("#IBM").style('opacity', "1")
+      });
+    
+    svg.append("text").data([MSFT[MSFT.length -1]])
+      .attr("class", "price")
+      .attr("y", function(d) { return y(d.price); })
+      .attr("x", width + 5)
+    	.style('fill', 'green')
+      .style("font-size", 14)
+      .style("font-family", "monospace")
+      .text(function(d, i) { return d.symbol; });
+    
+    // Add the x Axis
+    svg.append("g")
+      .attr("class", "axis axis--x")
+      .attr("transform", "translate(0," + height + ")")
+    	.style("font-family", "monospace")
+    	.style("font-size", 12)
+      .call(d3.axisBottom(x));
+    
+    // text label for the x axis
+  	svg.append("text")             
+      .attr("transform",
+            "translate(" + (width/2) + " ," + (height + margin.top*0.6) + ")")
+      .style("text-anchor", "middle")
+      .style("font-size", 14)
+      .style("font-family", "monospace")
+      .text("Date (Year)");
+    
+    // Add the y Axis
+    svg.append("g")
+      .attr("class", "axis axis--y")
+    	.style("font-family", "monospace")
+    	.style("font-size", 12)
+      .call(d3.axisLeft(y));
+
+  // text label for the y axis
+  svg.append("text")
+      .attr("transform", "rotate(-90)")
+      .attr("y", 0 - margin.left*0.8)
+      .attr("x",0 - (height / 2))
+      .attr("dy", "1em")
+      .style("text-anchor", "middle")
+      .style("font-size", 14)
+      .style("font-family", "monospace")
+      .text("Price($)");  
+    
+    
+  // title of the ligne chart
+  svg.append("text")             
+      .attr("transform",
+            "translate(" + (width/2) + " ," + (-margin.top*0.5) + ")")
+      .style("text-anchor", "middle")
+      .style("font-size", 16)
+      .style("font-family", "monospace")
+      .text("Yearly historical stock price for some big companies");
+
+
+  });
+  
+  
+ </script>
+ 
+</body>
