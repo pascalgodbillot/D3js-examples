@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<head>
+  <meta charset="utf-8">
+  <script src="https://d3js.org/d3.v4.min.js"></script>
+  <style>
+    body { margin:0;position:fixed;top:0;right:0;bottom:0;left:0; }
+  </style>
+</head>
+<body>
+  
+<script>
+  
+  //Define the global variables
+  var outerWidth = 900;
+  var outerHeight = 500
+	var margin = {top: 80, right:80, bottom:80, left: 80};
+  
+  var innerWidth = outerWidth - margin.left - margin.right;
+  var innerHeight = outerHeight - margin.top - margin.bottom;
+  
+  var xColumn = "date";
+  var yColumn = "price";
+  var colorColumn = "symbol";
+  var layerColumn = colorColumn;
+ 
+  
+  //Create the SVG
+  var svg = d3.select("body").append("svg")
+  .attr("width", outerWidth)
+  .attr("height", outerHeight);
+        
+  var g = svg.append("g")
+  .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+  
+  var xAxisG = g.append("g")
+  .attr("class", "x_axis")
+  .attr("transform", "translate(0,"+ innerHeight +")")
+  .style("font-family", "monospace")
+  .style("font-size", 12);
+  
+   var yAxisG = g.append("g")
+  .attr("class", "y_axis")
+  .style("font-family", "monospace")
+  .style("font-size", 12);
+
+  
+  var xScale = d3.scaleBand()
+  .paddingInner(0.1)
+  .range([0, innerWidth]);
+  
+  var yScale = d3.scaleLinear()
+  .range([innerHeight,0]);
+  
+  var colorScale = d3.scaleOrdinal(d3.schemeCategory20);
+  
+  var xAxis = d3.axisBottom(xScale);
+  var yAxis = d3.axisLeft(yScale).ticks(10)//.tickFormat(d3.format(".2s")) ;
+
+  function render(data){
+    
+    var nestedData = d3.nest()
+      .key(function(d) { return d[layerColumn]; })
+      .key(function(d) { return d[xColumn].getFullYear(); })
+      .rollup(function(v) {
+        return [d3.mean(v, function(d) { return d[yColumn]; }), v[0][layerColumn]]; 
+      })
+      .entries(data);
+    
+    var nestedDataBis = d3.nest()
+    .key(function(d) { return d[xColumn].getFullYear(); })
+    .key(function(d) { return d[layerColumn]; })
+    .rollup(function(v) {
+      return d3.mean(v, function(d) { return d[yColumn]; }); 
+    })
+    .entries(data);
+
+    // Calculate max average per year for each symbol
+    var maxPricePerCompanyPerYear = []
+    nestedData.forEach(function(s) {
+      maxPricePerCompanyPerYear.push(d3.max(s.values, function(d) { 
+        return d.value[0]; }));
+      return s;
+    });
+    
+    var start = d3.extent(data, function(d) { return d.date.getFullYear() })[0]
+    var end = d3.extent(data, function(d) { return d.date.getFullYear() })[1]
+    xScale.domain(d3.range(start,end+1));
+
+    yScale.domain([0, d3.sum(maxPricePerCompanyPerYear)]);
+  
+    xAxisG.call(xAxis);
+    yAxisG.call(yAxis);
+    
+    var stackData = [];
+
+    nestedDataBis.forEach(function(s) {
+      var tempObj = {}
+      s.values.forEach(function(d) {
+        tempObj[d.key] = d.value;
+      })
+      stackData.push(tempObj);
+    });
+   
+    
+    var symbolNames = [];
+
+    nestedData.forEach(function(s) {
+      symbolNames.push(s.key);
+    });
+    
+    var stack = d3.stack().keys(symbolNames)
+
+    var layers = stack(stackData);
+    
+    g.append("g")
+      .selectAll("g")
+      .data(layers)
+      .enter().append("g")
+      .attr("fill", function(d) { return colorScale(d.key); })
+      .selectAll("rect")
+      .data(function(d) { return d; })
+      .enter().append("rect")
+      .attr("x", function(d,i) { return xScale(i+start); })
+      .attr("y", function(d) { return yScale(d[1]); })
+      .attr("height", function(d) { return yScale(d[0]) - yScale(d[1]); })
+      .attr("width", xScale.bandwidth());
+    
+    
+    // text label for the x axis
+  	g.append("text")             
+      .attr("transform",
+            "translate(" + (innerWidth/2) + " ," + (innerHeight + margin.top*0.6) + ")")
+      .style("text-anchor", "middle")
+      .style("font-size", 14)
+      .style("font-family", "monospace")
+      .text("Date (Year)");
+    
+
+    // text label for the y axis
+    g.append("text")
+      .attr("transform", "rotate(-90)")
+      .attr("y", 0 - margin.left*0.8)
+      .attr("x",0 - (innerHeight / 2))
+      .attr("dy", "1em")
+      .style("text-anchor", "middle")
+      .style("font-size", 14)
+      .style("font-family", "monospace")
+      .text("Average price($)");  
+
+    // title of the ligne chart
+    g.append("text")             
+      .attr("transform",
+            "translate(" + (innerWidth/2) + " ," + (-margin.top*0.5) + ")")
+      .style("text-anchor", "middle")
+      .style("font-size", 16)
+      .style("font-family", "monospace")
+      .text("Yearly historical average stock price for some big companies");
+
+    
+		//title    
+    var legend = g.selectAll(".legend")
+    .data(nestedData)
+    .enter().append("g")
+    .attr("class", "g")
+    .attr("transform", function(d, i) { return "translate("+ -innerWidth +"," + i * 20 + ")"; })
+    .style("font-family", "monospace");
+    
+    
+    legend.selectAll("rect")
+      .data(function(d) { return d.values; })
+      .enter().append("rect")
+      .attr("x", innerWidth + 18)
+      .attr("width", 18)
+      .attr("height", 18)
+      .attr("fill", function(d) { return colorScale(d.value[1]); });
+
+   
+    legend.append("text")
+      .attr("x", innerWidth + 44)
+      .attr("y", 9)
+      .attr("dy", ".35em")
+      .attr("text-anchor", "start")
+      .text(function(d) { return d.key; });
+
+  }
+  
+  var parseDate = d3.timeParse("%b %Y");
+  var displayDate = d3.timeFormat("%b %Y");
+  
+  function type(d){
+    d.date = parseDate(d.date)
+    d.price = +d.price; 
+    return d;
+      }
+  
+  d3.csv("stocks.csv", type, render);
+  
+  
+</script>
+ 
+</body>
