@@ -9,7 +9,6 @@ Visualizations available are:
 
 - [Stacked bar chart](https://bl.ocks.org/pascalgodbillot/5afb1c19e3beb8f5b94968967f608e31/c807f7aabf681c9437c7ef66f025794002fd1e6c) of the stock values of Amazon, Apple, IBM and Microsoft from 2000 to 2010.
 
-- [Geo map]
-(https://bl.ocks.org/pascalgodbillot/ccf1cfd83ae901fbb6ed38886759ac60/4acc5ce7083172c45ac58a22fc6ccbaff3a10073) of people infected by the flu in France in 2014.
+- [Geo map](https://bl.ocks.org/pascalgodbillot/ccf1cfd83ae901fbb6ed38886759ac60/4acc5ce7083172c45ac58a22fc6ccbaff3a10073) of people infected by the flu in France in 2014.
 
 
