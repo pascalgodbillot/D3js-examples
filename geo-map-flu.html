@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<head>
+  <meta charset="utf-8">
+  <script src="https://d3js.org/d3.v4.min.js"></script>
+</script>
+  <style>
+    body { margin:0;position:fixed;top:0;right:0;bottom:0;left:0; }
+
+    .reg:hover {
+      opacity:1;
+    }
+    .reg {
+      fill: #000;
+      stroke: #fff;
+      stroke-width: 0.5px;
+      fill: #666;
+      opacity:1;
+    } 
+    .hidden {
+      display: none;
+    }
+    div.tooltip {
+      color: #222;
+      background-color: #fff;
+      padding: .5em;
+      text-shadow: #f5f5f5 0 1px 0;
+      border-radius: 10px;
+      opacity: 0.85;
+      position: absolute;
+    }
+  </style>
+</head>
+
+<body>
+
+  <div>
+    <span id="week">&emsp;&emsp;&emsp;&ensp;</span>
+    <input id="slider" type="range" value="1" min="1" max="52" step="1" />
+    <input id="button" type="button" value="Sum over 2014"/>
+    <div>Slide to see flu weekly details</div>
+  </div>
+  
+  <script>
+        
+    slider = document.getElementById("slider")
+    var dispSpan = document.getElementById("week");
+    
+    var width = 900,
+        height = 580;
+
+    var svg = d3.select( "body" )
+    .append( "svg" )
+    .attr( "width", width )
+    .attr( "height", height );
+
+    var color = d3.scaleLinear()
+        .range(['#FFFFFF', '#168727'])
+        .interpolate(d3.interpolateHcl);
+    
+    var tooltip = d3.select('body').append('div')
+    	.attr('class', 'hidden tooltip');
+    
+    var projection = d3.geoConicConformal().center([2.454071, 		45.589229]).scale(2500);
+
+    var path = d3.geoPath() // d3.geo.path avec d3 version 3
+    .projection(projection);
+
+		dic_color = {}
+    
+    dic_no_data = {}
+    for (var i = 1; i < 53; i++) {
+      dic_no_data[i] = "undefined"
+    }
+    dic_no_data.sum = "undefined"
+  
+    //console.log(dic_no_data)
+    
+    d3.csv("GrippeFrance2014.csv", function(data) {
+      
+			dic_flu = {}
+      var weeksArray = Object.keys(data[0])
+      
+      d3.json("geo-map-france.json", function(json) {
+        //On fusionne les donnees avec le GeoJSON des regions
+        
+        for (var i = 0; i < data.length; i++) {
+          dic_week = {};
+          var dataRegion = data[i].region;
+          weeksArray.forEach(function(week,j) {
+            if (week !== "region" && week !== "somme2014") {
+              var valued = parseFloat(data[i][week]);
+              dic_week[j] = valued;
+              if (dic_color[j] == undefined) {
+                dic_color[j] = [valued];
+              } else {dic_color[j].push(valued);}
+            }
+            if (week === "somme2014") {
+              var valued = parseFloat(data[i][week]);
+              if (dic_color["sum"] == undefined) {
+                dic_color["sum"] = [valued];
+              } else {dic_color["sum"].push(valued);}
+            }
+          })
+          dic_week.sum = parseFloat(data[i].somme2014);
+          dic_flu[dataRegion] = dic_week;
+        }
+
+        for (var k in dic_color) {
+          dic_color[k] = d3.max(dic_color[k]);
+        }
+        
+        json.features.forEach(function(d, i) {
+          var region = json.features[i].properties.nom
+          console.log(region)
+          if ( region !== 'Limousin' && region !== 'Corse'){
+            json.features[i].properties.value = dic_flu[region];
+          }
+          else{
+            json.features[i].properties.value = dic_no_data
+          }
+        })
+          
+        console.log(json.features)
+        var scale = dic_color.sum
+        color.domain([0, scale]);
+        
+        
+        svg.selectAll("path")
+          .data(json.features)
+          .enter()
+          .append("path")
+          .attr("d", path)
+          .attr('class', function(d) {
+          return 'reg ' + d.properties.code;
+        })
+          .on('mousemove', function(d) {
+          var mouse = d3.mouse(svg.node()).map(function(d) {
+            return parseInt(d)
+          });
+          tooltip.classed('hidden', false)
+            .attr('style', 'left:' + (mouse[0] + 15) +
+                  'px; top:' + (mouse[1] - 35) + 'px')
+            .html(d.properties.nom+ " : "+ d.properties.value.sum);
+        })
+          .on('mouseout', function() {
+          tooltip.classed('hidden', true);
+        })
+          .style("fill", function(d) {
+          try {
+            if (d.properties.nom !== 'Limousin' && d.properties.nom !== 'Corse'){
+              return color(d.properties.value.sum);
+            }
+            else {
+              return "#ccc"
+            }
+          }
+          catch {
+            return "#ccc"
+            }
+            });
+      
+      });
+    });
+            
+d3.select("#slider")
+  .on("input", function(d) {
+    var week_number = parseFloat(this.value);
+    dispSpan.innerHTML = "Week n°" + week_number;
+    var scale = dic_color[week_number];
+  	color.domain([0, scale]);
+    svg.selectAll("path")
+      .attr('class', function(d) {
+      return 'reg ' + d.properties.code;
+    })
+      .on('mousemove', function(d) {
+      var mouse = d3.mouse(svg.node()).map(function(d) {
+        return parseInt(d)
+      });
+      tooltip.classed('hidden', false)
+        .attr('style', 'left:' + (mouse[0] + 15) +
+              'px; top:' + (mouse[1] - 35) + 'px')
+        .html(d.properties.nom+ " : "+ d.properties.value[week_number]);
+    })
+      .on('mouseout', function() {
+      tooltip.classed('hidden', true);
+    })
+      .style("fill", function(dd) {
+      	try {
+          if (dd.properties.nom !== 'Limousin' && dd.properties.nom !== 'Corse'){
+          return color(dd.properties.value[week_number]);
+          }
+          else {
+            return "#ccc"
+          }
+          }
+        catch {
+          return "#ccc"
+          }
+    });
+})
+
+d3.select("#button")
+  .on("click", function(d) {
+    slider.value = 1
+    dispSpan.innerHTML = "&emsp;&emsp;&emsp;&ensp;";
+    week_number = "sum"
+    var scale = dic_color[week_number]
+    color.domain([0, scale]);
+  	//color.domain([0, 4200]);
+    svg.selectAll("path")
+      .attr('class', function(d) {
+      return 'reg ' + d.properties.code;
+    })
+      .on('mousemove', function(d) {
+      var mouse = d3.mouse(svg.node()).map(function(d) {
+        return parseInt(d)
+      });
+      tooltip.classed('hidden', false)
+        .attr('style', 'left:' + (mouse[0] + 15) +
+              'px; top:' + (mouse[1] - 35) + 'px')
+        .html(d.properties.nom+ " : "+ d.properties.value[week_number]);
+    })
+      .on('mouseout', function() {
+      tooltip.classed('hidden', true);
+    })
+      .style("fill", function(dd) {
+      	try {
+          if (dd.properties.nom !== 'Limousin' && dd.properties.nom !== 'Corse'){
+          return color(dd.properties.value[week_number]);
+          }
+          else {
+            return "#ccc"
+          }
+          }
+        catch {
+          return "#ccc"
+          }
+    });
+})
+    
+  </script>
+</body>
